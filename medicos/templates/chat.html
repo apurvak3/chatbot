@@ -1,0 +1,119 @@
+<!-- templates/chat.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat with Gemini</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .chat-box {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            overflow-y: auto;
+            max-height: 500px;
+            border: 1px solid #dee2e6;
+        }
+        .chat-entry {
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 6px;
+            background-color: white;
+            border: 1px solid #e9ecef;
+        }
+        .chat-entry p {
+            margin: 5px 0;
+        }
+        .user {
+            color: #0066cc;
+            font-weight: bold;
+        }
+        .bot {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .system {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        input[type="text"] {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        button {
+            padding: 12px 24px;
+            background-color: #0066cc;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.2s;
+        }
+        button:hover {
+            background-color: #0052a3;
+        }
+        .clear-button {
+            background-color: #6c757d;
+        }
+        .clear-button:hover {
+            background-color: #5a6268;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Gemini Chatbot</h1>
+            <form method="POST" action="{{ url_for('clear_history') }}" style="margin: 0;">
+                <button type="submit" class="clear-button">Clear History</button>
+            </form>
+        </div>
+        
+        <div class="chat-box">
+            {% for role, message in chat_history %}
+                <div class="chat-entry">
+                    <p class="{{ role.lower() }}">{{ role }}:</p>
+                    <p>{{ message }}</p>
+                </div>
+            {% endfor %}
+        </div>
+        
+        <form method="POST" action="{{ url_for('chat') }}">
+            <div class="input-group">
+                <input type="text" name="user_input" placeholder="Type your message..." required>
+                <button type="submit">Send</button>
+            </div>
+        </form>
+    </div>
+</body>
+</html>
