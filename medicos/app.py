@@ -1,4 +1,3 @@
-# app.py
 from flask import Flask, render_template, request
 import os
 from dotenv import load_dotenv
@@ -30,10 +29,22 @@ model = genai.GenerativeModel(
     generation_config=generation_config,
 )
 
+# Symptom to condition mapping
+SYMPTOM_MAP = {
+    "fever": "This might indicate an infection or flu. Consider taking paracetamol and staying hydrated. If it persists, consult a doctor.",
+    "cough": "This could be related to a cold, allergies, or bronchitis. Stay hydrated and consider consulting a doctor if it lasts more than a few days.",
+    "headache": "You might be experiencing a migraine or stress-related headache. Rest and hydration may help.",
+    "stomach pain": "This might be due to indigestion or gastritis. Avoid heavy meals and monitor your symptoms. Consult a doctor if severe.",
+    "sneezing": "Sneezing often indicates an allergy or the onset of a cold. Try to avoid allergens and rest well.",
+    "body heating": "A feeling of overheating might be due to fever or dehydration. Ensure you drink enough water and rest."
+}
+
 @app.route("/")
 def home():
     """Render the home page with chat history."""
-    return render_template('chat.html', chat_history=chat_history)
+    # Ensure chat_history is passed as a list of dictionaries
+    history_for_render = [{"role": item[0], "content": item[1]} for item in chat_history]
+    return render_template("chat.html", chat_history=history_for_render)
 
 @app.route("/chat", methods=["POST"])
 def chat():
@@ -43,30 +54,66 @@ def chat():
     
     if user_input:
         try:
-            # Start a chat session
-            chat_session = model.start_chat(history=[])
+            # Log user input for debugging
+            print(f"User input: {user_input}")
             
-            # Get response from the model
-            response = chat_session.send_message(user_input)
-            response_text = response.text.strip()
+            # Check for symptoms in the input
+            medical_response = analyze_symptoms(user_input)
             
-            # Add to chat history
-            chat_history.append(("You", user_input))
-            chat_history.append(("Bot", response_text))
+            if medical_response:
+                # Use tailored medical response
+                response_text = medical_response
+            else:
+                # Use the Gemini model for general responses
+                chat_session = model.start_chat(history=[])
+                response = chat_session.send_message(user_input)
+                
+                # Log the raw response
+                print(f"Raw bot response: {response.text}")
+                
+                if not response.text.strip():  # Check if response is empty or just whitespace
+                    response_text = "Sorry, I couldn't understand that."
+                else:
+                    # Trim or simplify the response
+                    response_text = simplify_response(response.text.strip())
+            
+            # Log the response being added to the history
+            print(f"Bot response: {response_text}")
+            
+            # Append to chat history in a format that the template can easily use
+            chat_history.append({"role": "You", "message": user_input})
+            chat_history.append({"role": "Bot", "message": response_text})
             
         except Exception as e:
             # Handle any errors
             error_message = f"An error occurred: {str(e)}"
-            chat_history.append(("System", error_message))
+            print(error_message)  # Log the error
+            chat_history.append({"role": "System", "message": error_message})
     
-    return render_template('chat.html', chat_history=chat_history)
-
+    return render_template("chat.html", chat_history=chat_history)
 @app.route("/clear", methods=["POST"])
 def clear_history():
     """Clear the chat history."""
     global chat_history
     chat_history = []
-    return render_template('chat.html', chat_history=chat_history)
+    return render_template("chat.html", chat_history=chat_history)
+
+def analyze_symptoms(user_input):
+    """
+    Analyze user input for medical symptoms and provide a response.
+    """
+    for symptom, advice in SYMPTOM_MAP.items():
+        if symptom in user_input.lower():
+            return f"I noticed you mentioned '{symptom}'. {advice}."
+    return None
+
+def simplify_response(response_text):
+    """
+    Simplify or summarize the model's response to make it more concise.
+    """
+    # Example: Take only the first paragraph or key actionable points
+    lines = response_text.split("\n")
+    return "\n".join(lines[:3]) if len(lines) > 3 else response_text
 
 if __name__ == "__main__":
     app.run(debug=True)
